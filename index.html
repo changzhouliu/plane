@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        #startBtn{
+            position: absolute;
+            left: 200px;
+            top: 300px;
+            display: none;
+        }
+        #endBtn{
+            position: absolute;
+            left: 700px;
+            top: 700px;
+            display: none;
+        }
+        #score1{
+            position: absolute;
+            left: 50px;
+            top: 10px;
+            font-size: 30px;
+        }
+        #win{
+            position: absolute;
+            left: 250px;
+            top: 300px;
+            font-size: 40px;
+            display: none;
+            color:red;
+        }
+        #title{
+            font-size: 50px;
+            position: absolute;
+            left: 20px;
+            top: 50px;
+            color:red;
+        }
+        body{
+            background: url("img/bg-4.jpg") no-repeat center/cover;
+        }
+
+    </style>
+</head>
+<body onload="onLoad()">
+<div style="margin: auto 25%;position: relative" >
+    <canvas id="cvs" width="800" height="800" style="border: 1px solid"></canvas>
+    <p id="score1"></p>
+    <p id="win"></p>
+<!--    <p id="title">飞机大战</p>-->
+    <img src="img/start.png" alt="" onclick="game.choose(1)" id="startBtn">
+    <img src="img/end.png" alt="" onclick="game.choose(0)" id="endBtn" width="100" height="100">
+</div>
+<script src="飞机大战.js"></script>
+<script>
+    var ctx=cvs.getContext('2d');
+    var game = null;
+    var startBtn = document.getElementById('startBtn');
+    var endBtn = document.getElementById('endBtn');
+    var score1 = document.getElementById('score1');
+    var win=document.getElementById('win');
+    score1.innerHTML= 'score: '+ score;
+    function onLoad() {
+        game = new Game();
+        game.choose(0);
+        game.update();
+        /*       game.updateGame();*/
+    }
+    function Game() {
+        var _this=this;
+        //生成敌人1号2号
+        this.frame1 = 0;
+        this.lastFrame1 = 0;
+        this.CD1 = 120;
+
+
+        //生成敌人子弹
+        this.frame12 = 0;
+        this.lastFrame12 = 0;
+        this.CD12 = 160;
+        //生成障碍物
+        this.frame22 = 0;
+        this.lastFrame22 = 0;
+        this.CD22 = 600;
+
+        //加血道具
+        this.frame3 = 0;
+        this.lastFrame3 = 0;
+        this.CD3 = 480;
+
+        this.currentBoss2bulletCD=0;
+        this.Boss2bulletCD=10;
+
+        //生成绿色子弹道具
+        this.currentgreenpropCD=0;
+        this.greenbulletpropCD=480;
+        //绿色子弹持续时间
+        this.currentgreenCD=480;
+        this.greenbulletCD1=0;
+        this.currentgreenbulletCD = 0;
+
+        //生成红色子弹道具
+        this.currentredpropCD=0;
+        this.redbulletpropCD=360;
+        //红色子弹持续时间
+        this.currentredCD=480;
+        this.redbulletCD1=0;
+        this.currentredbulletCD = 0;
+
+
+        this.keyCodes=[];
+        this.plane = new Plane();//飞机
+        this.bullets = [];//子弹
+        this.enemies = [];//敌人
+        this.bulletstate=0;//子弹状态
+        this.LimitEnemy = 6 ;//限制敌人数量
+        this.prop=[];//道具
+        this.fall=[];//掉落
+        this.fallstate=[];//掉落情况
+        this.fallstatenum=[];
+        this.hurt=30;
+        this.enemyhurt=30;
+        this.Boss2bulletAngle=90;
+        this.Boss2bulletNum = 36;
+        this.index=-2;
+        this.appearboss1=false;
+        this.appearboss2=false;
+        this.keyprocess = null;//按键处理
+        this.choose = function (index1) {
+            _this.index = index1;
+            if(_this.index==1) {
+                _this.plane = new Plane(this);//飞机
+                _this.bullets = [];//子弹
+                _this.enemies = [];//敌人
+                _this.LimitEnemy = 6 ;//限制敌人数量
+                _this.keyprocess=[];
+                _this.prop=[];
+                _this.fall=[];
+                _this.fallstate=[];//掉落情况
+                _this.fallstatenum=[];
+                _this.Boss2bulletAngle=90;
+                _this.Boss2bulletNum = 36;
+                _this.keyprocess = new KeyProcess(this);
+                _this.appearboss1=false;
+                _this.appearboss2=false;
+                _this.bulletstate=0;
+                score1.innerHTML='score: ' + score;
+                enemyhp=300;
+                planehp=1000;
+                boss1hp=4000;
+                boss2hp=100000;
+                score=0;
+                lastscore=0;
+            }else if(_this.index==2) {
+                _this.keyprocess = null;
+            }
+
+        };
+        this.update =function () {
+            switch (_this.index) {
+                case 0:
+                    ctx.clearRect(0,0,cvs.width,cvs.height);
+                    ctx.beginPath();
+                    ctx.drawImage(bg1,0,0,cvs.width,cvs.height);
+                    ctx.beginPath();
+                    ctx.fillStyle='red';
+                    ctx.font="oblique normal 900 100px arial";
+                    ctx.fillText("飞机大战",180,230);
+                    startBtn.style.display='block';
+                    endBtn.style.display = 'none';
+                    score1.style.display = 'none';
+                    score=0;
+                    break;
+                case 1:
+                    startBtn.style.display='none';
+                    score1.style.display = 'block';
+                    _this.updateGame();
+                    break;
+                case 2:
+                    ctx.clearRect(0,0,cvs.width,cvs.height);
+                    ctx.drawImage(bg2,0,0,cvs.width,cvs.height);
+                    endBtn.style.display='block';
+                    score1.style.display = 'none';
+                    ctx.fillStyle='red';
+                    ctx.font="oblique normal 900 80px arial";
+                    ctx.fillText("你输了 再来一次吧!",80,400);
+                    break;
+                case 3:
+                    ctx.clearRect(0,0,cvs.width,cvs.height);
+                    ctx.drawImage(bg3,0,0,cvs.width,cvs.height);
+                    ctx.fillStyle='red';
+                    ctx.font="oblique normal 900 80px arial";
+                    ctx.fillText("你赢了 再来一次吧!",80,400);
+                    endBtn.style.display='block';
+                    score1.style.display = 'none';
+                    break;
+            }
+            window.requestAnimationFrame(_this.update)
+        };
+        this.updateGame = function () {
+            ctx.clearRect(0,0,cvs.width,cvs.height);
+            ctx.drawImage(bg1,0,0,cvs.width,cvs.height);
+            _this.frame1++;
+            _this.frame12++;
+            _this.frame22++;
+            _this.frame3++;
+            _this.currentgreenpropCD++;
+            _this.currentredpropCD++;
+
+            //绿色子弹道具持续时间
+            if(_this.bulletstate==1){
+                _this.currentgreenbulletCD++;
+                _this.redbulletCD1=0;
+                _this.currentredbulletCD=0;
+                if(_this.currentgreenbulletCD >=_this.greenbulletCD1) {
+                    _this.currentgreenbulletCD=0;
+                    _this.bulletstate=0;
+                }
+            }else if(_this.bulletstate==0){
+                _this.currentgreenbulletCD=0;
+                _this.currentredbulletCD=0;
+                _this.greenbulletCD1=0;
+                _this.redbulletCD1=0
+            }else if(_this.bulletstate==2){
+                //红色子弹道具持续时间
+                _this.currentredbulletCD++;
+                _this.greenbulletCD1=0;
+                _this.currentgreenbulletCD=0;
+                if(_this.currentredbulletCD >=_this.redbulletCD1) {
+                    _this.currentredbulletCD=0;
+                    _this.bulletstate=0;
+                }
+            }
+
+            //飞机
+            _this.plane.draw();
+            _this.plane.updatePos();
+            _this.plane.drawskillbar();//技能
+
+            //生成敌人1号2号
+            if((_this.frame1 - _this.lastFrame1 >= _this.CD1) && (_this.enemies.length <  _this.LimitEnemy )) {
+                var a = Math.random();
+                var enemy = null;
+                if(a < 0.5) {
+                    enemy = new Enemy1('Enemy1');
+                }else {
+                    enemy = new Enemy2('Enemy2');
+                }
+                _this.enemies.push(enemy);
+                _this.lastFrame1 = _this.frame1;
+            }
+            //生成Boss1
+            if(score>=lastscore+400) {
+                lastscore+=400;
+                _this.appearboss1 = true;
+            }
+            if(_this.appearboss1==true) {
+                _this.LimitEnemy ++ ;//限制敌人数量
+                _this.enemies.push(new Boss1('Boss1'));
+                _this.appearboss1 = false;
+            }
+            //生成Boss2
+            if(_this.fallstatenum.length==3 && score>=2000 && _this.appearboss2==false) {
+                _this.LimitEnemy ++ ;//限制敌人数量
+                _this.enemies.push(new Boss2('Boss2'));
+                _this.appearboss2=true;
+            }
+            if(_this.frame22 - _this.lastFrame22 >= _this.CD22) {
+                _this.enemies.push(new Obstacle());
+                _this.lastFrame22 = _this.frame22;
+            }
+            //生成加血道具
+            if(_this.frame3 - _this.lastFrame3 >= _this.CD3) {
+                _this.prop.push(new TreatmentProp('blood'));
+                _this.lastFrame3 = _this.frame3;
+            }
+            //生成绿色子弹道具
+            if(_this.currentgreenpropCD >=_this.greenbulletpropCD) {
+                _this.currentgreenpropCD=0;
+                _this.prop.push(new GreenBulletProp('greenbullet'));
+            }
+            //生成红色子弹道具
+            if(_this.currentredpropCD >=_this.redbulletpropCD) {
+                _this.currentredpropCD=0;
+                _this.prop.push(new RedBulletProp('redbullet'));
+            }
+            //生成敌人子弹
+            var Boss1bulletAngle=0;
+            var Boss1bulletNum = 10;
+            if((_this.frame12 - _this.lastFrame12 >= _this.CD12) && (_this.enemies.length > 0 )) {
+                _this.enemies.forEach(function (t,index) {
+                    if(t.id == 'Enemy1') {
+                        _this.bullets.push(new Enemy1Bullet(_this,t.moveX1,t.moveY1,'Enemy1bullet',index));
+                    }else if(t.id == 'Enemy2') {
+                        _this.bullets.push(new Enemy2Bullet(_this,t.moveX1,t.moveY1,'Enemy2bullet',index));
+                    }else if(t.id == 'Boss1') {
+                        for(var i=0;i<Boss1bulletNum;i++) {
+                            _this.bullets.push(new BossBullet(_this,t.moveX1,t.moveY1,Boss1bulletAngle,t.size,'Boss1bullet',index,0));
+                            Boss1bulletAngle += 360/Boss1bulletNum;
+                        }
+                    }
+                });
+                _this.lastFrame12 = _this.frame12;
+            }
+            //Boss2子弹
+            _this.currentBoss2bulletCD++;
+            if(_this.currentBoss2bulletCD>=_this.Boss2bulletCD){
+                for(var s = 0; s<_this.enemies.length;s++) {
+                    if(_this.enemies[s].id=='Boss2'){
+                        _this.bullets.push(new BossBullet(_this,_this.enemies[s].moveX1,_this.enemies[s].moveY1,_this.Boss2bulletAngle,_this.enemies[s].size,'Boss2bullet',s));
+                        break;
+                    }
+                }
+                _this.Boss2bulletAngle += 360 / _this.Boss2bulletNum;
+                _this.currentBoss2bulletCD=0;
+            }
+            //子弹
+            _this.bullets.forEach(function (t,index) {
+                t.draw();
+                t.updatePos();
+                t.collision();
+                if(t.dead==true) {
+                    _this.bullets.splice(index,1);
+                }
+            });
+            //敌人
+            _this.enemies.forEach(function (t,index) {
+                t.draw();
+                t.updatePos();
+                t.collision();
+                if(t.dead==true) {
+                    _this.enemies.splice(index,1);
+                }
+            });
+            //道具
+            _this.prop.forEach(function (t,index) {
+                t.draw();
+                t.updatePos();
+                t.collision();
+                if(t.dead==true) {
+                    _this.prop.splice(index,1);
+                }
+            });
+            //飞机 掉落
+            _this.fall.forEach(function (t,index) {
+                var dx = t.fallX - _this.plane.moveX;
+                var dy=t.fallY-_this.plane.moveY;
+                if(Math.sqrt(dx*dx+dy*dy) <= t.size/2+_this.plane.size/2){
+                    if(_this.fallstatenum.indexOf(t.fallc)==-1) {
+                        //生成掉落情况
+                        _this.fallstate.push(new Fallstate(t,_this.fallstatenum.length));
+                        _this.fallstatenum.push(t.fallc);
+                    }
+                    _this.fall.splice(index,1);
+                }
+            });
+            //掉落
+            _this.fall.forEach(function (t) {
+                t.draw()
+            });
+            //掉落情况
+            _this.fallstate.forEach(function (t) {
+                t.drawstate();
+                t.updatePos();
+            });
+            //子弹伤害
+            if(_this.bulletstate==0) {
+                _this.hurt=30;
+            }else if(_this.bulletstate==1){
+                _this.hurt=100;
+            }else if(_this.bulletstate==2){
+                _this.hurt=30;
+            }
+            //子弹打到对方
+            if(_this.bullets.length>0) {
+                for(var i=_this.bullets.length-1; i >=0;i--) {
+                    if(_this.bullets[i].id==0) {
+                        for(var j = _this.enemies.length-1;j >=0; j--) {
+                            var dx = _this.bullets[i].moveX - (_this.enemies[j].moveX1+_this.enemies[j].size/2);
+                            var dy=_this.bullets[i].moveY-(_this.enemies[j].moveY1+_this.enemies[j].size/2);
+                            if(Math.sqrt(dx*dx+dy*dy) <= _this.bullets[i].size/2+_this.enemies[j].size/2){
+                                if(_this.enemies[j].id=='Boss1'){
+                                    _this.enemies[j].boss1Hp-=_this.hurt;
+                                    if(_this.enemies[j].boss1Hp <= 0) {
+                                        _this.plane.skillbar+=skillbar*0.1;
+                                        var fallb=Math.random()*1;
+                                        var fallc;
+                                        if(fallb<0.5) {
+                                            fallc=0;
+                                        }else if(fallb>0.5&&fallb<0.8){
+                                            fallc=1;
+                                        }else {
+                                            fallc=2;
+                                        }
+                                        _this.LimitEnemy--;
+                                        _this.fall.push(new Fall(_this.enemies[j],_this.enemies[j].moveX1,_this.enemies[j].moveY1,fallc));
+                                        _this.enemies.splice(j,1);
+                                    }
+                                }else if(_this.enemies[j].id=='Enemy1'){
+                                    _this.enemies[j].enemy1Hp -=_this.hurt;
+                                    if(_this.enemies[j].enemy1Hp<0){
+                                        _this.plane.skillbar+=skillbar*0.1;
+                                        _this.enemies.splice(j,1);
+                                        score+=50;
+                                        score1.innerHTML='score: '+ score;
+
+                                    }
+                                }else if(_this.enemies[j].id=='Enemy2'){
+                                    _this.enemies[j].enemy2Hp -=_this.hurt;
+                                    if(_this.enemies[j].enemy2Hp<0){
+                                        _this.plane.skillbar+=skillbar*0.1;
+                                        _this.enemies.splice(j,1);
+                                        score+=100;
+                                        score1.innerHTML='score: '+ score;
+                                    }
+                                }else if(_this.enemies[j].id=='Boss2'){
+                                    _this.enemies[j].boss2Hp-=_this.hurt;
+                                    if(_this.enemies[j].boss2Hp <= 0) {
+                                        var fallc=3;
+                                        _this.plane.skillbar+=skillbar*0.1;
+                                        _this.fall.push(new Fall(_this.enemies[j],_this.enemies[j].moveX1,_this.enemies[j].moveY1,fallc));
+                                        _this.enemies.splice(j,1);
+                                    }
+                                }
+                                _this.bullets.splice(i,1);
+                                break;
+                            }
+                        }
+                    }
+                    else {//敌人子弹
+                        var dx1 = _this.bullets[i].moveX - (_this.plane.moveX+_this.plane.size/2);
+                        var dy1=_this.bullets[i].moveY-(_this.plane.moveY+_this.plane.size/2);
+                        if(Math.sqrt(dx1*dx1+dy1*dy1) <= _this.bullets[i].size/2+_this.plane.size/2){
+                            _this.plane.planeHp -=_this.enemyhurt;
+                            if(_this.plane.planeHp<=0){
+                                _this.plane.planeHp=0
+                            }
+                            _this.bullets.splice(i,1);
+                        }
+                    }
+                }
+            }
+            //敌人碰到飞机
+            _this.enemies.forEach(function (t) {
+                var dx = (t.moveX1+t.size/2) -(_this.plane.moveX+_this.plane.size/2);
+                var dy=(t.moveY1+t.size/2)-(_this.plane.moveY+_this.plane.size/2);
+                if(Math.sqrt(dx*dx+dy*dy) <= t.size/2+_this.plane.size/2){
+                    _this.plane.planeHp -=10;
+                    if(_this.plane.planeHp<=0){
+                        _this.plane.planeHp=0
+                    }
+                }
+            });
+            //飞机吃到道具
+            _this.prop.forEach(function (t,index) {
+                var dx = t.moveX1 - _this.plane.moveX;
+                var dy=t.moveY1-_this.plane.moveY;
+                if(Math.sqrt(dx*dx+dy*dy) <= t.size/2+_this.plane.size/2){
+                    _this.prop.splice(index,1);
+                    if(t.id=='blood'){
+                       if(_this.plane.planeHp<planehp){
+                           _this.plane.planeHp+=planehp*0.2;
+                       }
+                       if(_this.plane.planeHp>=planehp){
+                           _this.plane.planeHp=planehp;
+                       }
+
+                    }else if(t.id=='greenbullet') {
+                        _this.bulletstate=1;
+                        _this.greenbulletCD1+=_this.currentgreenCD; //绿色子弹道具持续时间
+                    }else if(t.id=='redbullet'){
+                        _this.bulletstate=2;
+                        _this.redbulletCD1+=_this.currentredCD; //红色子弹道具持续时间
+                    }
+                }
+            });
+            //技能条
+            if(_this.plane.skillbar>=skillbar){
+                _this.plane.skillbar=skillbar;
+                _this.plane.skillswitch=true;
+            }
+
+            if(_this.plane.planeHp<=0) {
+                _this.index=2;
+                _this.plane.planeHp=1000;
+            }
+
+            if(_this.fallstatenum.length==4) {
+                _this.index=3;
+            }
+
+        };
+    }
+</script>
+</body>
+</html>
